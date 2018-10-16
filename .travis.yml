@@ -1,0 +1,72 @@
+dist: trusty
+sudo: false
+language: cpp
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-6
+      - git
+
+before_install:
+  # Get the tool used to upload coverage results to coveralls
+  - gem install coveralls-lcov
+  # Set the extra prefix for external libraries and tools
+  - export EXTRA_DIR="$PWD/extra"
+  # Get LLCOV
+  - export LCOV_DIR="$EXTRA_DIR/lcov"
+  - mkdir -p "$LCOV_DIR"
+  - pushd "$LCOV_DIR"
+  - wget https://github.com/linux-test-project/lcov/archive/v1.12.zip
+  - unzip v1.12.zip
+  - LCOV="$PWD/lcov-1.12/bin/lcov --gcov-tool gcov-6"
+  - popd
+
+script:
+  # Save some directories
+  - export PROJECT_DIR="$PWD"
+  - export TEST_SRC_DIR="$PROJECT_DIR/test"
+  - export BUILD_DIR="$PROJECT_DIR/build"
+  # Print some information
+  - echo "Current dir is $PWD"
+  # Set compiler
+  - export CXX=/usr/bin/g++-6
+  # Set compiler flags
+  - export CXXFLAGS="-I$PROJECT_DIR/.."
+  - export CXXFLAGS="$CXXFLAGS -std=c++98"
+  - export CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wconversion"
+  # Set linker flags
+  - export LDFLAGS=""
+  # Set coverage flags
+  - export COVFLAGS="--coverage"
+  # Create the build directory
+  - mkdir -p "$BUILD_DIR" && pushd "$BUILD_DIR"
+  # Build, run each test, grab the stderr and test if the
+  # number of type cast warnings match the expected
+  - mkdir -p "test1" && pushd "test1"
+  - $CXX $CXXFLAGS "$TEST_SRC_DIR/test1.cpp" $LDFLAGS -o test1 $COVFLAGS 2> test.err
+  - export NWARN=$(cat test.err | grep -i warning | wc -l)
+  - echo "Found $NWARN warnings."
+  - test "$NWARN" -eq 47
+  - ./test1
+  - popd
+  - mkdir -p "test1_silent_cast" && pushd "test1_silent_cast"
+  - $CXX $CXXFLAGS -DW1C_SILENT_CAST "$TEST_SRC_DIR/test1.cpp" $LDFLAGS -o test1 $COVFLAGS 2> test.err
+  - export NWARN=$(cat test.err | grep -i warning | wc -l)
+  - echo "Found $NWARN warnings."
+  - test "$NWARN" -eq 0
+  - ./test1
+  - popd
+  - popd
+
+after_success:
+  # Set the coverage file name for lcov
+  - export COVERAGE_FILE="$BUILD_DIR/coverage.info"
+  # Run lcov on the generated coverage data
+  - $LCOV --directory "$BUILD_DIR" --base-directory "$PROJECT_DIR" --capture --output-file "$COVERAGE_FILE"
+  # Keep only the project headers in the coverage data by 
+  # removing the tests themselves and the extra libraries
+  - $LCOV --remove "$COVERAGE_FILE" "/usr*" "$TEST_SRC_DIR/*" "$EXTRA_DIR/*" -o "$COVERAGE_FILE"
+  - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
