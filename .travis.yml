@@ -45,20 +45,28 @@ script:
   - mkdir -p "$BUILD_DIR" && pushd "$BUILD_DIR"
   # Build, run each test, grab the stderr and test if the
   # number of type cast warnings match the expected
-  - mkdir -p "test1" && pushd "test1"
-  - $CXX $CXXFLAGS "$TEST_SRC_DIR/test1.cpp" $LDFLAGS -o test1 $COVFLAGS 2> test.err
-  - export NWARN=$(cat test.err | grep -i warning | wc -l)
-  - echo "Found $NWARN warnings."
-  - test "$NWARN" -eq 47
-  - ./test1
-  - popd
-  - mkdir -p "test1_silent_cast" && pushd "test1_silent_cast"
-  - $CXX $CXXFLAGS -DW1C_SILENT_CAST "$TEST_SRC_DIR/test1.cpp" $LDFLAGS -o test1 $COVFLAGS 2> test.err
-  - export NWARN=$(cat test.err | grep -i warning | wc -l)
-  - echo "Found $NWARN warnings."
-  - test "$NWARN" -eq 0
-  - ./test1
-  - popd
+  - |
+    for test in "$TEST_SRC_DIR"/*.cpp ; do
+      test_dir="$(basename $test)"
+      mkdir -p "$test_dir" && pushd "$test_dir"
+      CXXFLAGS2=$CXXFLAGS
+      for mode in no_silent silent ; do
+        echo "Testing $test_dir $mode..."
+        mkdir -p "$mode" && pushd "$mode"
+        CMD="$CXX $CXXFLAGS2 "$test" $LDFLAGS -o test $COVFLAGS"
+        echo "$CMD"
+        $CMD 2> test.err || exit 1
+        export NWARN="$(cat test.err | grep -i warning | wc -l)"
+        export NWARN_EXP="$(cat $test.$mode.nwarns)"
+        echo "Found $NWARN warnings, expected $NWARN_EXP."
+        test "$NWARN" -eq "$NWARN_EXP" || exit 1
+        ./test || exit 1
+        echo "Passed."
+        popd
+        CXXFLAGS2="$CXXFLAGS -DW1C_SILENT_CAST"
+      done
+      popd
+    done
   - popd
 
 after_success:
