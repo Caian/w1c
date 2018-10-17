@@ -66,6 +66,9 @@ after_success:
   - export COVERAGE_FILE="$BUILD_DIR/coverage.info"
   # Run lcov on the generated coverage data
   - $LCOV --directory "$BUILD_DIR" --base-directory "$PROJECT_DIR" --capture --output-file "$COVERAGE_FILE"
+  # Remove original coverage files to avoid confusing codecov
+  - find "$BUILD_DIR" -name "*.gcno" -exec rm {} \;
+  - find "$BUILD_DIR" -name "*.gcda" -exec rm {} \;
   # Keep only the project headers in the coverage data by 
   # removing the tests themselves and the extra libraries
   - $LCOV --remove "$COVERAGE_FILE" "/usr*" "$TEST_SRC_DIR/*" "$EXTRA_DIR/*" -o "$COVERAGE_FILE"
