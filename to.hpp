@@ -23,17 +23,18 @@
 namespace w1c {
 
 /**
- * Assign a value to another.
- * 
+ * Convert value from a type to another.
+ *
  * @tparam TTo The type of the result.
  * @tparam TFrom The type of the source.
- * 
+ *
  * @param to A reference to the result of the assignment
  * @param from A constant reference to assign to the result.
- * 
+ *
  * @note This method will perform simple assignments by default, 
  * so it will trigger compilation warnings if the source value 
- * does not fit into the result. To disable warnings, one can define 
+ * does not fit into the result. To disable cast warnings and
+ * change the behavior to a static_cast, one can define
  * W1C_SILENT_CAST before including to.hpp.
  */
 template <typename TTo, typename TFrom>
