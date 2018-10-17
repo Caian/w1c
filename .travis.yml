@@ -1,0 +1,84 @@
+dist: trusty
+sudo: false
+language: cpp
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-6
+      - git
+
+before_install:
+  # Get the tool used to upload coverage results to coveralls
+  - gem install coveralls-lcov
+  # Set the extra prefix for external libraries and tools
+  - export EXTRA_DIR="$PWD/extra"
+  # Get LLCOV
+  - export LCOV_DIR="$EXTRA_DIR/lcov"
+  - mkdir -p "$LCOV_DIR"
+  - pushd "$LCOV_DIR"
+  - wget https://github.com/linux-test-project/lcov/archive/v1.12.zip
+  - unzip v1.12.zip
+  - LCOV="$PWD/lcov-1.12/bin/lcov --gcov-tool gcov-6"
+  - popd
+
+script:
+  # Save some directories
+  - export PROJECT_DIR="$PWD"
+  - export TEST_SRC_DIR="$PROJECT_DIR/test"
+  - export BUILD_DIR="$PROJECT_DIR/build"
+  # Print some information
+  - echo "Current dir is $PWD"
+  # Set compiler
+  - export CXX=/usr/bin/g++-6
+  # Set compiler flags
+  - export CXXFLAGS="-I$PROJECT_DIR/.."
+  - export CXXFLAGS="$CXXFLAGS -std=c++98"
+  - export CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wconversion"
+  # Set linker flags
+  - export LDFLAGS=""
+  # Set coverage flags
+  - export COVFLAGS="--coverage"
+  # Create the build directory
+  - mkdir -p "$BUILD_DIR" && pushd "$BUILD_DIR"
+  # Build, run each test, grab the stderr and test if the
+  # number of type cast warnings match the expected
+  - |
+    for test in "$TEST_SRC_DIR"/*.cpp ; do
+      test_dir="$(basename $test)"
+      mkdir -p "$test_dir" && pushd "$test_dir"
+      CXXFLAGS2=$CXXFLAGS
+      for mode in no_silent silent ; do
+        echo "Testing $test_dir $mode..."
+        mkdir -p "$mode" && pushd "$mode"
+        CMD="$CXX $CXXFLAGS2 "$test" $LDFLAGS -o test $COVFLAGS"
+        echo "$CMD"
+        $CMD 2> test.err || exit 1
+        export NWARN="$(cat test.err | grep -i warning | wc -l)"
+        export NWARN_EXP="$(cat $test.$mode.nwarns)"
+        echo "Found $NWARN warnings, expected $NWARN_EXP."
+        test "$NWARN" -eq "$NWARN_EXP" || exit 1
+        ./test || exit 1
+        echo "Passed."
+        popd
+        CXXFLAGS2="$CXXFLAGS -DW1C_SILENT_CAST"
+      done
+      popd
+    done
+  - popd
+
+after_success:
+  # Set the coverage file name for lcov
+  - export COVERAGE_FILE="$BUILD_DIR/coverage.info"
+  # Run lcov on the generated coverage data
+  - $LCOV --directory "$BUILD_DIR" --base-directory "$PROJECT_DIR" --capture --output-file "$COVERAGE_FILE"
+  # Remove original coverage files to avoid confusing codecov
+  - find "$BUILD_DIR" -name "*.gcno" -exec rm {} \;
+  - find "$BUILD_DIR" -name "*.gcda" -exec rm {} \;
+  # Keep only the project headers in the coverage data by 
+  # removing the tests themselves and the extra libraries
+  - $LCOV --remove "$COVERAGE_FILE" "/usr*" "$TEST_SRC_DIR/*" "$EXTRA_DIR/*" -o "$COVERAGE_FILE"
+  # Upload the coverage results to codecov
+  - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
