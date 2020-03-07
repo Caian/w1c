@@ -14,8 +14,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Make; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * along with w1c.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <w1c/to.hpp>
@@ -24,11 +23,11 @@
 #include <stdint.h>
 
 /**
- * Test the conversion of a value with a given type 
+ * Test the conversion of a value with a given type
  * to several other types.
- * 
+ *
  * @tparam T The type of the value that will be converted.
- * 
+ *
  * @param value The value that will be converted.
  */
 template <typename T>
@@ -56,7 +55,7 @@ void test(const T& value)
     w1c::to(usvalue, value);
     w1c::to(ucvalue, value);
 
-    std::cout 
+    std::cout
         <<  dvalue << std::endl
         <<  fvalue << std::endl
         <<  lvalue << std::endl
@@ -71,10 +70,10 @@ void test(const T& value)
 
 /**
  * Program entrypoint.
- * 
+ *
  * @param argc The number of arguments passed to the program.
  * @param argv The array of arguments passed to the program.
- * 
+ *
  * @return The exit code of the program
  */
 int main(int argc, const char* argv[])

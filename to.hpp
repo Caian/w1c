@@ -14,8 +14,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with GNU Make; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * along with w1c.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -31,8 +30,8 @@ namespace w1c {
  * @param to A reference to the result of the assignment
  * @param from A constant reference to assign to the result.
  *
- * @note This method will perform simple assignments by default, 
- * so it will trigger compilation warnings if the source value 
+ * @note This method will perform simple assignments by default,
+ * so it will trigger compilation warnings if the source value
  * does not fit into the result. To disable cast warnings and
  * change the behavior to a static_cast, one can define
  * W1C_SILENT_CAST before including to.hpp.
